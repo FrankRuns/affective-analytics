@@ -1,0 +1,12 @@
+{
+  "name": "affective-analytics-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build needed'",
+    "start": "node api/mcp.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  }
+}
