@@ -1,3 +1,5 @@
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import express from 'express';
 import cors from 'cors';
 import { generateSampleData, computeHistogram, createChartSpec } from './tools.js';
@@ -12,66 +14,73 @@ app.use(express.static('public'));
 // Cached sample data
 const sampleData = generateSampleData();
 
-// MCP endpoint
-app.post('/mcp', async (req, res) => {
-  const { method, params } = req.body;
-  
-  try {
-    // List tools
-    if (method === 'tools/list') {
-      return res.json({
-        tools: [
-          {
-            name: 'get_histogram',
-            description: 'Get histogram data with adjustable bin count. Use when user asks to see histogram or change bins.',
-            inputSchema: {
-              type: 'object',
-              properties: {
-                bins: {
-                  type: 'number',
-                  description: 'Number of bins (2-60)',
-                  default: 10
-                }
-              }
-            }
+// Create MCP server
+const server = new Server(
+  {
+    name: 'histogram-explorer',
+    version: '1.0.0',
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Register histogram tool
+server.setRequestHandler('tools/list', async () => ({
+  tools: [
+    {
+      name: 'get_histogram',
+      description: 'Get histogram data with adjustable bin count. Use when user asks to see histogram or change bins.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          bins: {
+            type: 'number',
+            description: 'Number of bins (2-60)',
+            default: 10
           }
-        ]
-      });
-    }
-    
-    // Call tool
-    if (method === 'tools/call') {
-      const { name, arguments: args } = params;
-      
-      if (name === 'get_histogram') {
-        const bins = Math.max(2, Math.min(60, args?.bins || 10));
-        const histogram = computeHistogram(sampleData, bins);
-        const chartSpec = createChartSpec(histogram, bins);
-        
-        return res.json({
-          content: [{
-            type: 'text',
-            text: `Histogram with ${bins} bins (sample size: ${sampleData.length} points)`
-          }],
-          isError: false,
-          _meta: {
-            histogram,
-            bins,
-            chartSpec,
-            sampleSize: sampleData.length
-          }
-        });
+        }
       }
     }
+  ]
+}));
+
+server.setRequestHandler('tools/call', async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  if (name === 'get_histogram') {
+    const bins = Math.max(2, Math.min(60, (args as any)?.bins || 10));
+    const histogram = computeHistogram(sampleData, bins);
+    const chartSpec = createChartSpec(histogram, bins);
     
-    res.status(404).json({ error: 'Unknown method' });
-    
-  } catch (error: any) {
-    res.status(500).json({ 
-      error: error.message,
-      isError: true 
-    });
+    return {
+      content: [{
+        type: 'text',
+        text: `Histogram with ${bins} bins (sample size: ${sampleData.length} points)`
+      }],
+      _meta: {
+        histogram,
+        bins,
+        chartSpec,
+        sampleSize: sampleData.length
+      }
+    };
   }
+  
+  throw new Error('Unknown tool');
+});
+
+// SSE endpoint for MCP
+app.get('/mcp', async (req, res) => {
+  const transport = new SSEServerTransport('/mcp/message', res);
+  await server.connect(transport);
+});
+
+app.post('/mcp/message', async (req, res) => {
+  // Handle incoming messages - this is managed by SSEServerTransport
+  res.status(200).end();
 });
 
 // Health check
