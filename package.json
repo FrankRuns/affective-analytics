@@ -1,11 +1,10 @@
 {
-  "name": "histogram-chatgpt-app",
+  "name": "histogram-railway",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server/index.ts",
-    "build": "tsc",
-    "start": "node dist/server/index.js"
+    "dev": "tsx index.ts",
+    "start": "tsx index.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
