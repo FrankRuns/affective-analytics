@@ -65,14 +65,14 @@ export default async function handler(req: any, res: any) {
         name: 'get_histogram',
         description: 'Get histogram with adjustable bins',
         inputSchema: {
-          type: 'object' as const,
+          type: 'object',
           properties: {
             bins: { 
-              type: 'number' as const,
-              description: 'Number of bins (2-60)',
-              default: 10 
+              type: 'number',
+              description: 'Number of bins (2-60)'
             }
-          }
+          },
+          required: []
         }
       }]
     }));
