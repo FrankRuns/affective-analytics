@@ -12,33 +12,31 @@ import { z } from "zod";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DIST_DIR = path.join(__dirname, "dist");
-const RESOURCE_URI = "ui://histogram-lab/mcp-app-v1.html";
+const RESOURCE_URI = "ui://probabilistic-thinking/mcp-app-v1.html";
 
 export function createServer(): McpServer {
   const server = new McpServer({
-    name: "Affective Analytics Histogram Lab",
-    version: "0.1.0",
+    name: "Probabilistic Thinking",
+    version: "1.0.0",
   });
 
-  const histogramInputSchema = {
-    distribution: z
-      .enum(["normal", "uniform", "exponential", "bimodal"])
-      .default("normal"),
-    n: z.number().min(10).max(50000).default(500),
-    mean: z.number().default(0),
-    std: z.number().min(0.0001).default(1),
-    bins: z.number().min(2).max(100).default(20),
-    seed: z.number().min(0).default(42),
+  const courseInputSchema = {
+    // Resume at a specific lesson (0-3), or omit to start from the beginning
+    lessonIndex: z.number().min(0).max(3).default(0).optional(),
+    // Pre-fill learner profile from a previous conversation
+    role: z.string().optional(),
+    domain: z.string().optional(),
+    challenge: z.string().optional(),
   };
 
   registerAppTool(
     server,
-    "open-histogram-lab",
+    "open-probabilistic-thinking",
     {
-      title: "Open Histogram Lab",
+      title: "Open Probabilistic Thinking",
       description:
-        "Open an interactive histogram playground for generating synthetic data and adjusting histogram bins.",
-      inputSchema: histogramInputSchema,
+        "Launch the Probabilistic Thinking course — an interactive, personalized learning experience that teaches learners to reason under uncertainty. The course opens with a compelling hook, gathers context through a short conversation, then delivers 4 visually interactive lessons adapted to the learner's role, domain, and key decisions.",
+      inputSchema: courseInputSchema,
       annotations: {
         readOnlyHint: true,
         openWorldHint: false,
@@ -48,30 +46,23 @@ export function createServer(): McpServer {
         ui: {
           resourceUri: RESOURCE_URI,
         },
-        "openai/toolInvocation/invoking": "Opening Histogram Lab…",
-        "openai/toolInvocation/invoked": "Histogram Lab ready.",
+        "openai/toolInvocation/invoking": "Opening Probabilistic Thinking…",
+        "openai/toolInvocation/invoked": "Probabilistic Thinking ready.",
       },
     },
-    async (args: z.infer<z.ZodObject<typeof histogramInputSchema>>) => {
-      const defaults = {
-        distribution: "normal",
-        n: 500,
-        mean: 0,
-        std: 1,
-        bins: 20,
-        seed: 42,
-      };
-      const initial = { ...defaults, ...args };
-
+    async (args: z.infer<z.ZodObject<typeof courseInputSchema>>) => {
       return {
         structuredContent: {
-          initial,
-          title: "Histogram Lab",
+          phase: args.lessonIndex != null && args.lessonIndex > 0 ? "lesson" : "hook",
+          lessonIndex: args.lessonIndex ?? 0,
+          role: args.role ?? "",
+          domain: args.domain ?? "",
+          challenge: args.challenge ?? "",
         },
         content: [
           {
             type: "text",
-            text: "Opened Histogram Lab with configurable synthetic data parameters.",
+            text: "Probabilistic Thinking course launched. The learner will see the intro, share their context, then work through 4 personalized interactive lessons.",
           },
         ],
       };
@@ -94,7 +85,7 @@ export function createServer(): McpServer {
             _meta: {
               ui: {
                 prefersBorder: true,
-                domain: "histogram-lab",
+                domain: "probabilistic-thinking",
                 csp: {
                   connectDomains: [],
                   resourceDomains: ["https://cdn.plot.ly"],
